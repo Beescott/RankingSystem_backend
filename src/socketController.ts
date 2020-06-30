@@ -2,11 +2,6 @@ import { SocketEvent } from "./constants";
 import { Player } from "./components/player";
 import { jsonFileController } from "./components/jsonFileController";
 
-const path = require('path');
-const fs = require('fs');
-
-// Path of the json file
-const urlToRankingsFile: string = path.resolve(__dirname + '/../res/', 'rankings.json');
 
 export class SocketController {
     private _socketHandler: SocketIO.Server;
@@ -33,6 +28,16 @@ export class SocketController {
                 this.pushNewScore(data);
                 jsonFileController.savePlayerListInFile(this._players);
             })
+
+            socket.on(SocketEvent.REQUEST_SCORES, (data: number) => {
+                let requestedPlayers = this.getScores(data);
+                socket.emit(SocketEvent.SEND_SCORES, requestedPlayers);
+            });
+
+            socket.on(SocketEvent.REQUEST_PLAYER_SCORE, (data: string) => {
+                let requestedPlayer = this.getPlayerScore(data);
+                socket.emit(SocketEvent.SEND_PLAYER_SCORE, requestedPlayer);
+            });
 
             socket.on(SocketEvent.DISCONNECTED, (data: any) => {
                 console.log('A player has disconnected');
@@ -84,5 +89,43 @@ export class SocketController {
         }
 
         console.log(this._players);
+    }
+
+    /**
+     * @param data number of wanted players to send
+     * @return the specified number of players, or the whole players array if number is out of bound
+     */
+    private getScores(nPlayers: number): Array<Player> {
+        console.log('Scores requested');
+        if (isNaN(nPlayers)) {
+            return;
+        }
+        
+        if (nPlayers <= 0 || nPlayers >= this._players.length) {
+            return this._players;
+        }
+
+        let subArray = this._players.slice(0, nPlayers);
+        return subArray;
+    }
+
+    /**
+     * Check for all players in database to see if the player exists
+     * if he does, returns him
+     * @param playerName 
+     * @return the requested player
+     */
+    private getPlayerScore(playerName: string): Player {
+        let p: Player = undefined;
+        for (let index = 0; index < this._players.length; index++) {
+            const player: Player = this._players[index];
+            if (player.name == playerName)
+            {
+                p = player;
+                break;
+            }
+        }
+
+        return p;
     }
 }
