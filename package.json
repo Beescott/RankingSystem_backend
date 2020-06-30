@@ -1,0 +1,29 @@
+{
+  "name": "rankingsystem_backend",
+  "version": "1.0.0",
+  "description": "back end of a ranking system in node js",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "localServer": "set DEBUG=&&ts-node-dev --respawn --transpileOnly src/index.ts"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Beescott/RankingSystem_backend.git"
+  },
+  "author": "Beescott",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Beescott/RankingSystem_backend/issues"
+  },
+  "homepage": "https://github.com/Beescott/RankingSystem_backend#readme",
+  "dependencies": {
+    "@types/node": "^14.0.14",
+    "@types/socket.io": "^2.1.8",
+    "socket.io": "^2.3.0",
+    "ts-node": "^8.10.2",
+    "ts-node-dev": "^1.0.0-pre.49",
+    "typescript": "^3.9.5",
+    "typescript-tslint-plugin": "^0.5.5"
+  }
+}
