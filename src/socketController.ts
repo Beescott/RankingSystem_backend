@@ -1,14 +1,23 @@
 import { SocketEvent } from "./constants";
 import { Player } from "./components/player";
+import { jsonFileController } from "./components/jsonFileController";
+
+const path = require('path');
+const fs = require('fs');
+
+// Path of the json file
+const urlToRankingsFile: string = path.resolve(__dirname + '/../res/', 'rankings.json');
 
 export class SocketController {
     private _socketHandler: SocketIO.Server;
     private _players: Array<Player>;
+    private _fileController: jsonFileController;
 
     constructor(handler: SocketIO.Server) {
         this._socketHandler = handler;
         this._players = new Array<Player>();
-
+        
+        this._players = jsonFileController.readRankingFile();
         this.listen();
     }
 
@@ -22,6 +31,7 @@ export class SocketController {
             socket.on(SocketEvent.PUSH_SCORE, (data: any) => {
                 console.log('Requesting a score push');
                 this.pushNewScore(data);
+                jsonFileController.savePlayerListInFile(this._players);
             })
 
             socket.on(SocketEvent.DISCONNECTED, (data: any) => {
@@ -58,9 +68,9 @@ export class SocketController {
         let receivedPlayerScore = Number(receivedPlayer.score);
         if (isNaN(receivedPlayerScore))
             return;
-        
+
         // TODO : check name format to avoid special character or injection
-        let newPlayer: Player = new Player(receivedPlayer.name, receivedPlayerScore);        
+        let newPlayer: Player = new Player(receivedPlayer.name, receivedPlayerScore);
 
         // if the player doesn't exist then push it into the database
         // otherwise update his score
