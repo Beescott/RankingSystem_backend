@@ -24,10 +24,11 @@ export class SocketController {
             console.log('A player has connected');
 
             socket.on(SocketEvent.PUSH_SCORE, (data: any) => {
-                console.log('Requesting a score push');
+                console.log('Score push requested');
                 let pushResult = this.pushNewScore(data);
 
                 socket.emit(SocketEvent.EVENT_STATUS, pushResult);
+                this.sortPlayersArray();
 
                 // only save the file if the push was successfull
                 if (pushResult.status == EventStatus.SUCCESS)
@@ -35,6 +36,7 @@ export class SocketController {
             })
 
             socket.on(SocketEvent.REQUEST_SCORES, (data: number) => {
+                console.log('Scores requested');
                 let requestScoreResult = this.getScores(data);
 
                 socket.emit(SocketEvent.EVENT_STATUS, requestScoreResult.status);
@@ -44,6 +46,7 @@ export class SocketController {
             });
 
             socket.on(SocketEvent.REQUEST_PLAYER_SCORE, (data: string) => {
+                console.log('Player score requested');
                 let requestPlayerResult = this.getPlayerScore(data);
 
                 socket.emit(SocketEvent.EVENT_STATUS, requestPlayerResult.status);
@@ -53,14 +56,13 @@ export class SocketController {
             });
 
             socket.on(SocketEvent.REMOVE_PLAYER, (data: string) => {
+                console.log('Remove player requested');
                 let removePlayerResult = this.removePlayerScore(data);
 
                 socket.emit(SocketEvent.EVENT_STATUS, removePlayerResult);
 
                 if(removePlayerResult.status == EventStatus.SUCCESS)
                     jsonFileController.savePlayerListInFile(this._players);
-
-                console.log(this._players);
             });
 
             socket.on(SocketEvent.DISCONNECTED, (data: any) => {
@@ -116,7 +118,6 @@ export class SocketController {
             existingPlayer.score = newPlayer.score;
         }
 
-        console.log(this._players);
         return { status: EventStatus.SUCCESS };
     }
 
@@ -125,7 +126,6 @@ export class SocketController {
      * @return the specified number of players, or the whole players array if number is out of bound
      */
     private getScores(nPlayers: number): { status: EventStatusController, players?: Array<Player> } {
-        console.log('Scores requested');
         if (isNaN(nPlayers)) {
             let status = { status: EventStatus.ERROR, message: 'get_score : the argument is not a number' };
             return { status };
@@ -191,5 +191,14 @@ export class SocketController {
         }
 
         return p;
+    }
+
+    /**
+     * Sort the players' array
+     * TODO : do not use this function, as it is planned to insert in an ordered list
+     * TODO : instead of sorting the array every time
+     */
+    private sortPlayersArray(): void {
+        this._players.sort((a:Player, b:Player) => a.score - b.score);
     }
 }
