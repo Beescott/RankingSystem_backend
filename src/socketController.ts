@@ -23,16 +23,23 @@ export class SocketController {
         this._socketHandler.on(SocketEvent.CONNECTED, (socket: any) => {
             console.log('A player has connected');
 
+            socket.on(SocketEvent.PING, (data:any) => {
+                console.log('Pinged server');
+                socket.emit(SocketEvent.PONG);
+                socket.emit(SocketEvent.EVENT_STATUS, {status: EventStatus.SUCCESS, message: 'Success!!'});
+            });
+
             socket.on(SocketEvent.PUSH_SCORE, (data: any) => {
                 console.log('Score push requested');
                 let pushResult = this.pushNewScore(data);
 
                 socket.emit(SocketEvent.EVENT_STATUS, pushResult);
-                this.sortPlayersArray();
 
                 // only save the file if the push was successfull
-                if (pushResult.status == EventStatus.SUCCESS)
+                if (pushResult.status == EventStatus.SUCCESS) {
+                    this.sortPlayersArray();
                     jsonFileController.savePlayerListInFile(this._players);
+                }
             })
 
             socket.on(SocketEvent.REQUEST_SCORES, (data: number) => {
@@ -118,6 +125,7 @@ export class SocketController {
             existingPlayer.score = newPlayer.score;
         }
 
+        console.log('pushed player : ' + JSON.stringify(newPlayer));
         return { status: EventStatus.SUCCESS };
     }
 

@@ -1,6 +1,8 @@
 export enum SocketEvent {
     CONNECTED = 'connection',
     DISCONNECTED = 'disconnection',
+    PING = 'ping',
+    PONG = 'pong',
     PUSH_SCORE = 'push_score',
     REQUEST_SCORES = 'request_scores',
     SEND_SCORES = 'send_scores',
