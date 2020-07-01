@@ -31,6 +31,7 @@ export class jsonFileController {
     /**
      * Save players into the ranking file
      * TODO : only add the new player into the file, don't need to rewrite everything everytime
+     * ? Might have a concurrency problem when writing in the file
      */
     public static savePlayerListInFile(allPlayers: Array<Player>): void {
         let playersJSON = JSON.stringify(allPlayers);

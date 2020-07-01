@@ -19,7 +19,6 @@ export class Player {
     set score(s: number) {
         // only update score if specified number is higher than actual score
         this._score = Math.max(this.score, s);
-        // this._score = s;
     }
     //#endregion
 }

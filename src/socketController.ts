@@ -1,7 +1,7 @@
-import { SocketEvent } from "./constants";
-import { Player } from "./components/player";
-import { jsonFileController } from "./components/jsonFileController";
-
+import { SocketEvent, EventStatus } from './constants';
+import { Player } from './components/player';
+import { jsonFileController } from './components/jsonFileController';
+import { EventStatusController } from './components/eventStatusController';
 
 export class SocketController {
     private _socketHandler: SocketIO.Server;
@@ -11,7 +11,7 @@ export class SocketController {
     constructor(handler: SocketIO.Server) {
         this._socketHandler = handler;
         this._players = new Array<Player>();
-        
+
         this._players = jsonFileController.readRankingFile();
         this.listen();
     }
@@ -25,18 +25,42 @@ export class SocketController {
 
             socket.on(SocketEvent.PUSH_SCORE, (data: any) => {
                 console.log('Requesting a score push');
-                this.pushNewScore(data);
-                jsonFileController.savePlayerListInFile(this._players);
+                let pushResult = this.pushNewScore(data);
+
+                socket.emit(SocketEvent.EVENT_STATUS, pushResult);
+
+                // only save the file if the push was successfull
+                if (pushResult.status == EventStatus.SUCCESS)
+                    jsonFileController.savePlayerListInFile(this._players);
             })
 
             socket.on(SocketEvent.REQUEST_SCORES, (data: number) => {
-                let requestedPlayers = this.getScores(data);
-                socket.emit(SocketEvent.SEND_SCORES, requestedPlayers);
+                let requestScoreResult = this.getScores(data);
+
+                socket.emit(SocketEvent.EVENT_STATUS, requestScoreResult.status);
+
+                if (requestScoreResult.status.status == EventStatus.SUCCESS)
+                    socket.emit(SocketEvent.SEND_SCORES, requestScoreResult.players);
             });
 
             socket.on(SocketEvent.REQUEST_PLAYER_SCORE, (data: string) => {
-                let requestedPlayer = this.getPlayerScore(data);
-                socket.emit(SocketEvent.SEND_PLAYER_SCORE, requestedPlayer);
+                let requestPlayerResult = this.getPlayerScore(data);
+
+                socket.emit(SocketEvent.EVENT_STATUS, requestPlayerResult.status);
+
+                if (requestPlayerResult.status.status == EventStatus.SUCCESS)
+                    socket.emit(SocketEvent.SEND_PLAYER_SCORE, requestPlayerResult.player);
+            });
+
+            socket.on(SocketEvent.REMOVE_PLAYER, (data: string) => {
+                let removePlayerResult = this.removePlayerScore(data);
+
+                socket.emit(SocketEvent.EVENT_STATUS, removePlayerResult);
+
+                if(removePlayerResult.status == EventStatus.SUCCESS)
+                    jsonFileController.savePlayerListInFile(this._players);
+
+                console.log(this._players);
             });
 
             socket.on(SocketEvent.DISCONNECTED, (data: any) => {
@@ -49,30 +73,34 @@ export class SocketController {
      * Takes a JSON as input, if the format is correct, then push the player into the array
      * @param data 
      */
-    private pushNewScore(data: any): void {
+    private pushNewScore(data: any): EventStatusController {
         // stringify the JSON in order to parse it afterward
         let stringifyData = JSON.stringify(data);
         let receivedPlayer = JSON.parse(stringifyData);
 
         // Checking to see if the send format is correct
         if (!("name" in receivedPlayer)) {
-            return;
+            return { status: EventStatus.ERROR, message: 'a field "name" is lacking in the received player' };
         }
 
         if (!("score" in receivedPlayer)) {
-            return;
+            return { status: EventStatus.ERROR, message: 'a field "score" is lacking in the received player' };
+        }
+
+        if (typeof receivedPlayer.name == 'undefined' || !receivedPlayer.name) {
+            return { status: EventStatus.ERROR, message: 'name can not be empty' };
         }
 
         // if the received object has more than two 
         let keyNumberInJSON = Object.keys(receivedPlayer).length;
         if (keyNumberInJSON != 2) {
-            return;
+            return { status: EventStatus.ERROR, message: 'there is more than 2 fields in the received player' };
         }
 
         // Cast received score into number to check score format
         let receivedPlayerScore = Number(receivedPlayer.score);
         if (isNaN(receivedPlayerScore))
-            return;
+            return { status: EventStatus.ERROR, message: 'the "score" field is not a number' };;
 
         // TODO : check name format to avoid special character or injection
         let newPlayer: Player = new Player(receivedPlayer.name, receivedPlayerScore);
@@ -89,24 +117,27 @@ export class SocketController {
         }
 
         console.log(this._players);
+        return { status: EventStatus.SUCCESS };
     }
 
     /**
      * @param data number of wanted players to send
      * @return the specified number of players, or the whole players array if number is out of bound
      */
-    private getScores(nPlayers: number): Array<Player> {
+    private getScores(nPlayers: number): { status: EventStatusController, players?: Array<Player> } {
         console.log('Scores requested');
         if (isNaN(nPlayers)) {
-            return;
+            let status = { status: EventStatus.ERROR, message: 'get_score : the argument is not a number' };
+            return { status };
         }
-        
+
         if (nPlayers <= 0 || nPlayers >= this._players.length) {
-            return this._players;
+            let status = { status: EventStatus.SUCCESS };
+            return { status: { status: EventStatus.SUCCESS }, players: this._players };
         }
 
         let subArray = this._players.slice(0, nPlayers);
-        return subArray;
+        return { status: { status: EventStatus.SUCCESS }, players: subArray };
     }
 
     /**
@@ -115,12 +146,45 @@ export class SocketController {
      * @param playerName 
      * @return the requested player
      */
-    private getPlayerScore(playerName: string): Player {
+    private getPlayerScore(playerName: string): { status: EventStatusController, player: Player } {
+        let p: Player = this.getPlayerInArray(playerName);
+
+        let eventStatus: EventStatus = p == undefined ? EventStatus.ERROR : EventStatus.SUCCESS;
+        let messageStatus: string = p == undefined ? 'get player score: player is not in database' : undefined;
+
+        let eventStatusController: EventStatusController = { status: eventStatus, message: messageStatus };
+        return { status: eventStatusController, player: p };
+    }
+
+    /**
+     * Remove a player from the server players' list
+     * @param playerName 
+     */
+    private removePlayerScore(playerName: string): EventStatusController {
+        let p: Player = this.getPlayerInArray(playerName);
+
+        let eventStatus: EventStatus = p == undefined ? EventStatus.ERROR : EventStatus.SUCCESS;
+        let messageStatus: string = p == undefined ? 'remove player score: player is not in database' : undefined;
+
+        if (p != undefined) {
+            const index = this._players.indexOf(p, 0);
+            this._players.splice(index, 1);
+        }
+
+        let eventStatusController: EventStatusController = { status: eventStatus, message: messageStatus };
+        return eventStatusController;
+    }
+
+    /**
+     * return a player if the specified name is in the players' list
+     * @param playerName 
+     * @return Player
+     */
+    private getPlayerInArray(playerName: string): Player {
         let p: Player = undefined;
         for (let index = 0; index < this._players.length; index++) {
             const player: Player = this._players[index];
-            if (player.name == playerName)
-            {
+            if (player.name == playerName) {
                 p = player;
                 break;
             }
