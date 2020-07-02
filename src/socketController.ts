@@ -33,7 +33,7 @@ export class SocketController {
                 console.log('Score push requested');
                 let pushResult = this.pushNewScore(data);
 
-                socket.emit(SocketEvent.EVENT_STATUS, pushResult);
+                socket.emit(SocketEvent.EVENT_STATUS, {pushResult, message: 'Push successfull'});
 
                 // only save the file if the push was successfull
                 if (pushResult.status == EventStatus.SUCCESS) {
@@ -126,7 +126,7 @@ export class SocketController {
         }
 
         console.log('pushed player : ' + JSON.stringify(newPlayer));
-        return { status: EventStatus.SUCCESS };
+        return { status: EventStatus.SUCCESS, message: 'successfully pushed score' };
     }
 
     /**
@@ -141,11 +141,11 @@ export class SocketController {
 
         if (nPlayers <= 0 || nPlayers >= this._players.length) {
             let status = { status: EventStatus.SUCCESS };
-            return { status: { status: EventStatus.SUCCESS }, players: this._players };
+            return { status: { status: EventStatus.SUCCESS, message: 'successfully retrieved scores' }, players: this._players };
         }
 
         let subArray = this._players.slice(0, nPlayers);
-        return { status: { status: EventStatus.SUCCESS }, players: subArray };
+        return { status: { status: EventStatus.SUCCESS, message: 'successfully retrieved scores' }, players: subArray };
     }
 
     /**
@@ -158,7 +158,7 @@ export class SocketController {
         let p: Player = this.getPlayerInArray(playerName);
 
         let eventStatus: EventStatus = p == undefined ? EventStatus.ERROR : EventStatus.SUCCESS;
-        let messageStatus: string = p == undefined ? 'get player score: player is not in database' : undefined;
+        let messageStatus: string = p == undefined ? 'get player score: player is not in database' : 'successfully got player';
 
         let eventStatusController: EventStatusController = { status: eventStatus, message: messageStatus };
         return { status: eventStatusController, player: p };
@@ -172,7 +172,7 @@ export class SocketController {
         let p: Player = this.getPlayerInArray(playerName);
 
         let eventStatus: EventStatus = p == undefined ? EventStatus.ERROR : EventStatus.SUCCESS;
-        let messageStatus: string = p == undefined ? 'remove player score: player is not in database' : undefined;
+        let messageStatus: string = p == undefined ? 'remove player score: player is not in database' : 'successfully removed player score';
 
         if (p != undefined) {
             const index = this._players.indexOf(p, 0);
