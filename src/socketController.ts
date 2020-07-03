@@ -33,7 +33,7 @@ export class SocketController {
                 console.log('Score push requested');
                 let pushResult = this.pushNewScore(data);
 
-                socket.emit(SocketEvent.EVENT_STATUS, {pushResult, message: 'Push successfull'});
+                socket.emit(SocketEvent.EVENT_STATUS, pushResult);
 
                 // only save the file if the push was successfull
                 if (pushResult.status == EventStatus.SUCCESS) {
@@ -42,14 +42,15 @@ export class SocketController {
                 }
             })
 
-            socket.on(SocketEvent.REQUEST_SCORES, (data: number) => {
+            socket.on(SocketEvent.REQUEST_SCORES, (data: any) => {
                 console.log('Scores requested');
                 let requestScoreResult = this.getScores(data);
 
                 socket.emit(SocketEvent.EVENT_STATUS, requestScoreResult.status);
-
+                
+                // requestScoreResult.players
                 if (requestScoreResult.status.status == EventStatus.SUCCESS)
-                    socket.emit(SocketEvent.SEND_SCORES, requestScoreResult.players);
+                    socket.emit(SocketEvent.SEND_SCORES, {players: requestScoreResult.players});
             });
 
             socket.on(SocketEvent.REQUEST_PLAYER_SCORE, (data: string) => {
@@ -57,6 +58,7 @@ export class SocketController {
                 let requestPlayerResult = this.getPlayerScore(data);
 
                 socket.emit(SocketEvent.EVENT_STATUS, requestPlayerResult.status);
+
 
                 if (requestPlayerResult.status.status == EventStatus.SUCCESS)
                     socket.emit(SocketEvent.SEND_PLAYER_SCORE, requestPlayerResult.player);
@@ -89,27 +91,27 @@ export class SocketController {
 
         // Checking to see if the send format is correct
         if (!("name" in receivedPlayer)) {
-            return { status: EventStatus.ERROR, message: 'a field "name" is lacking in the received player' };
+            return { status: EventStatus.ERROR, message: 'A field "name" is lacking in the received player' };
         }
 
         if (!("score" in receivedPlayer)) {
-            return { status: EventStatus.ERROR, message: 'a field "score" is lacking in the received player' };
+            return { status: EventStatus.ERROR, message: 'A field "score" is lacking in the received player' };
         }
 
         if (typeof receivedPlayer.name == 'undefined' || !receivedPlayer.name) {
-            return { status: EventStatus.ERROR, message: 'name can not be empty' };
+            return { status: EventStatus.ERROR, message: 'The field name can not be empty' };
         }
 
         // if the received object has more than two 
         let keyNumberInJSON = Object.keys(receivedPlayer).length;
         if (keyNumberInJSON != 2) {
-            return { status: EventStatus.ERROR, message: 'there is more than 2 fields in the received player' };
+            return { status: EventStatus.ERROR, message: 'There is more than 2 fields in the received player' };
         }
 
         // Cast received score into number to check score format
         let receivedPlayerScore = Number(receivedPlayer.score);
         if (isNaN(receivedPlayerScore))
-            return { status: EventStatus.ERROR, message: 'the "score" field is not a number' };;
+            return { status: EventStatus.ERROR, message: 'The "score" field is not a number' };;
 
         // TODO : check name format to avoid special character or injection
         let newPlayer: Player = new Player(receivedPlayer.name, receivedPlayerScore);
@@ -126,26 +128,26 @@ export class SocketController {
         }
 
         console.log('pushed player : ' + JSON.stringify(newPlayer));
-        return { status: EventStatus.SUCCESS, message: 'successfully pushed score' };
+        return { status: EventStatus.SUCCESS, message: 'Successfully pushed score' };
     }
 
     /**
      * @param data number of wanted players to send
      * @return the specified number of players, or the whole players array if number is out of bound
      */
-    private getScores(nPlayers: number): { status: EventStatusController, players?: Array<Player> } {
+    private getScores(data: any): { status: EventStatusController, players?: Array<Player> } {
+        let nPlayers = Number(data.numberPlayers);
         if (isNaN(nPlayers)) {
-            let status = { status: EventStatus.ERROR, message: 'get_score : the argument is not a number' };
+            let status = { status: EventStatus.ERROR, message: 'Get_score : the argument is not a number' };
             return { status };
         }
 
         if (nPlayers <= 0 || nPlayers >= this._players.length) {
-            let status = { status: EventStatus.SUCCESS };
-            return { status: { status: EventStatus.SUCCESS, message: 'successfully retrieved scores' }, players: this._players };
+            return { status: { status: EventStatus.SUCCESS, message: 'Successfully retrieved scores' }, players: this._players };
         }
 
         let subArray = this._players.slice(0, nPlayers);
-        return { status: { status: EventStatus.SUCCESS, message: 'successfully retrieved scores' }, players: subArray };
+        return { status: { status: EventStatus.SUCCESS, message: 'Successfully retrieved scores' }, players: subArray };
     }
 
     /**
@@ -158,7 +160,7 @@ export class SocketController {
         let p: Player = this.getPlayerInArray(playerName);
 
         let eventStatus: EventStatus = p == undefined ? EventStatus.ERROR : EventStatus.SUCCESS;
-        let messageStatus: string = p == undefined ? 'get player score: player is not in database' : 'successfully got player';
+        let messageStatus: string = p == undefined ? 'Get player score: player is not in database' : 'successfully got player';
 
         let eventStatusController: EventStatusController = { status: eventStatus, message: messageStatus };
         return { status: eventStatusController, player: p };
@@ -172,7 +174,7 @@ export class SocketController {
         let p: Player = this.getPlayerInArray(playerName);
 
         let eventStatus: EventStatus = p == undefined ? EventStatus.ERROR : EventStatus.SUCCESS;
-        let messageStatus: string = p == undefined ? 'remove player score: player is not in database' : 'successfully removed player score';
+        let messageStatus: string = p == undefined ? 'Remove player score: player is not in database' : 'successfully removed player score';
 
         if (p != undefined) {
             const index = this._players.indexOf(p, 0);
