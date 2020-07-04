@@ -2,6 +2,7 @@ import { SocketEvent, EventStatus } from './constants';
 import { Player } from './components/player';
 import { jsonFileController } from './components/jsonFileController';
 import { EventStatusController } from './components/eventStatusController';
+import { reverse } from 'dns';
 
 export class SocketController {
     private _socketHandler: SocketIO.Server;
@@ -23,10 +24,10 @@ export class SocketController {
         this._socketHandler.on(SocketEvent.CONNECTED, (socket: any) => {
             console.log('A player has connected');
 
-            socket.on(SocketEvent.PING, (data:any) => {
+            socket.on(SocketEvent.PING, (data: any) => {
                 console.log('Pinged server');
                 socket.emit(SocketEvent.PONG);
-                socket.emit(SocketEvent.EVENT_STATUS, {status: EventStatus.SUCCESS, message: 'Success!!'});
+                socket.emit(SocketEvent.EVENT_STATUS, { status: EventStatus.SUCCESS, message: 'Success!!' });
             });
 
             socket.on(SocketEvent.PUSH_SCORE, (data: any) => {
@@ -47,10 +48,11 @@ export class SocketController {
                 let requestScoreResult = this.getScores(data);
 
                 socket.emit(SocketEvent.EVENT_STATUS, requestScoreResult.status);
-                
-                // requestScoreResult.players
+
+                console.log(requestScoreResult.players);
                 if (requestScoreResult.status.status == EventStatus.SUCCESS)
-                    socket.emit(SocketEvent.SEND_SCORES, {players: requestScoreResult.players});
+                    socket.emit(SocketEvent.SEND_SCORES, { players: requestScoreResult.players });
+
             });
 
             socket.on(SocketEvent.REQUEST_PLAYER_SCORE, (data: string) => {
@@ -70,7 +72,7 @@ export class SocketController {
 
                 socket.emit(SocketEvent.EVENT_STATUS, removePlayerResult);
 
-                if(removePlayerResult.status == EventStatus.SUCCESS)
+                if (removePlayerResult.status == EventStatus.SUCCESS)
                     jsonFileController.savePlayerListInFile(this._players);
             });
 
@@ -209,6 +211,6 @@ export class SocketController {
      * TODO : instead of sorting the array every time
      */
     private sortPlayersArray(): void {
-        this._players.sort((a:Player, b:Player) => a.score - b.score);
+        this._players.sort((a: Player, b: Player) => b.score - a.score);
     }
 }
