@@ -9,7 +9,8 @@ export enum SocketEvent {
     REQUEST_PLAYER_SCORE = 'request_player_score',
     SEND_PLAYER_SCORE = 'send_player_score',
     EVENT_STATUS = 'event_status',
-    REMOVE_PLAYER = 'remove_player'
+    REMOVE_PLAYER = 'remove_player',
+    PLAYER_REMOVED = 'player_removed'
 }
 
 export enum EventStatus {

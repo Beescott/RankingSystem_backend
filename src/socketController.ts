@@ -23,6 +23,7 @@ export class SocketController {
     private listen(): void {
         this._socketHandler.on(SocketEvent.CONNECTED, (socket: any) => {
             console.log('A player has connected');
+            socket.emit(SocketEvent.EVENT_STATUS, { status: EventStatus.SUCCESS, message: 'Successfully connected to the server' });
 
             socket.on(SocketEvent.PING, (data: any) => {
                 console.log('Pinged server');
@@ -49,7 +50,6 @@ export class SocketController {
 
                 socket.emit(SocketEvent.EVENT_STATUS, requestScoreResult.status);
 
-                console.log(requestScoreResult.players);
                 if (requestScoreResult.status.status == EventStatus.SUCCESS)
                     socket.emit(SocketEvent.SEND_SCORES, { players: requestScoreResult.players });
 
@@ -73,7 +73,10 @@ export class SocketController {
                 socket.emit(SocketEvent.EVENT_STATUS, removePlayerResult);
 
                 if (removePlayerResult.status == EventStatus.SUCCESS)
+                {
                     jsonFileController.savePlayerListInFile(this._players);
+                    socket.emit(SocketEvent.PLAYER_REMOVED);
+                }
             });
 
             socket.on(SocketEvent.DISCONNECTED, (data: any) => {
@@ -113,7 +116,10 @@ export class SocketController {
         // Cast received score into number to check score format
         let receivedPlayerScore = Number(receivedPlayer.score);
         if (isNaN(receivedPlayerScore))
-            return { status: EventStatus.ERROR, message: 'The "score" field is not a number' };;
+            return { status: EventStatus.ERROR, message: 'The "score" field is not a number' };
+
+        if (receivedPlayerScore > 1e+10)
+            return { status: EventStatus.ERROR, message: 'The score is too big' };
 
         // TODO : check name format to avoid special character or injection
         let newPlayer: Player = new Player(receivedPlayer.name, receivedPlayerScore);
@@ -172,7 +178,8 @@ export class SocketController {
      * Remove a player from the server players' list
      * @param playerName 
      */
-    private removePlayerScore(playerName: string): EventStatusController {
+    private removePlayerScore(data: any): EventStatusController {
+        let playerName: string = data.playerName;
         let p: Player = this.getPlayerInArray(playerName);
 
         let eventStatus: EventStatus = p == undefined ? EventStatus.ERROR : EventStatus.SUCCESS;
@@ -183,7 +190,7 @@ export class SocketController {
             this._players.splice(index, 1);
         }
 
-        let eventStatusController: EventStatusController = { status: eventStatus, message: messageStatus };
+        let eventStatusController: EventStatusController = { status: eventStatus , message: messageStatus };
         return eventStatusController;
     }
 

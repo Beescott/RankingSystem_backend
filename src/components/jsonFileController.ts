@@ -16,14 +16,12 @@ export class jsonFileController {
         let rawData = fs.readFileSync(urlToRankingsFile);
         let dataJSON = JSON.parse(rawData);
 
-        console.log(dataJSON);
         dataJSON.forEach(data => {
             let newPlayer = new Player(data._name, Number(data._score));
             allPlayers.push(newPlayer);
         });
 
         console.log('rankings.json file read successfully');
-        console.log(allPlayers);
 
         return allPlayers;
     }
