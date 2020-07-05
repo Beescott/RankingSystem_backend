@@ -55,15 +55,13 @@ export class SocketController {
 
             });
 
-            socket.on(SocketEvent.REQUEST_PLAYER_SCORE, (data: string) => {
+            socket.on(SocketEvent.REQUEST_PLAYER_SCORE, (data: any) => {
                 console.log('Player score requested');
                 let requestPlayerResult = this.getPlayerScore(data);
 
                 socket.emit(SocketEvent.EVENT_STATUS, requestPlayerResult.status);
 
-
-                if (requestPlayerResult.status.status == EventStatus.SUCCESS)
-                    socket.emit(SocketEvent.SEND_PLAYER_SCORE, requestPlayerResult.player);
+                socket.emit(SocketEvent.SEND_PLAYER_SCORE, { player: requestPlayerResult.player });
             });
 
             socket.on(SocketEvent.REMOVE_PLAYER, (data: string) => {
@@ -72,8 +70,7 @@ export class SocketController {
 
                 socket.emit(SocketEvent.EVENT_STATUS, removePlayerResult);
 
-                if (removePlayerResult.status == EventStatus.SUCCESS)
-                {
+                if (removePlayerResult.status == EventStatus.SUCCESS) {
                     jsonFileController.savePlayerListInFile(this._players);
                     socket.emit(SocketEvent.PLAYER_REMOVED);
                 }
@@ -164,7 +161,8 @@ export class SocketController {
      * @param playerName 
      * @return the requested player
      */
-    private getPlayerScore(playerName: string): { status: EventStatusController, player: Player } {
+    private getPlayerScore(data: any): { status: EventStatusController, player: Player } {
+        let playerName: string = data.playerName;
         let p: Player = this.getPlayerInArray(playerName);
 
         let eventStatus: EventStatus = p == undefined ? EventStatus.ERROR : EventStatus.SUCCESS;
@@ -190,7 +188,7 @@ export class SocketController {
             this._players.splice(index, 1);
         }
 
-        let eventStatusController: EventStatusController = { status: eventStatus , message: messageStatus };
+        let eventStatusController: EventStatusController = { status: eventStatus, message: messageStatus };
         return eventStatusController;
     }
 
